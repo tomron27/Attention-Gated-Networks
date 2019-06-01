@@ -126,7 +126,7 @@ class FeedForwardClassifier(BaseModel):
         self.gt_lbls = []
 
     def accumulate_results(self):
-        self.losses.append(self.loss.data[0])
+        self.losses.append(self.loss.item())#.data[0])
         self.pr_probs.append(self.pred[0].cpu().numpy())
         self.pr_lbls.append(self.pred[1].cpu().numpy())
         self.gt_lbls.append(self.target.data.cpu().numpy())
@@ -154,7 +154,7 @@ class FeedForwardClassifier(BaseModel):
                             ('breakdown', breakdown)])
 
     def get_current_errors(self):
-        return OrderedDict([('CE', self.loss.data[0])])
+        return OrderedDict([('CE', self.loss.item())])#.data[0])])
 
     def get_accumulated_errors(self):
         return OrderedDict([('CE', np.mean(self.losses))])
