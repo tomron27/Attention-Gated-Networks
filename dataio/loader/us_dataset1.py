@@ -7,7 +7,7 @@ import os
 
 from os import listdir
 from os.path import join
-from scipy.misc import imresize
+from skimage.transform import resize
 #from .utils import check_exceptions
 
 
@@ -118,7 +118,7 @@ class UltraSoundDataset1(data.Dataset):
         img = np.nan_to_num(img)
         img = img[50:img.shape[0]-30, 20:img.shape[1]-50]
         img = autocrop(img, 0.05)
-        img = imresize(img, oshape)
+        img = resize(img, oshape)
 
         #input = input.transpose((1,2,0))
 

@@ -52,23 +52,25 @@ class Transformations:
 
     def ukbb_sax_transform(self):
 
-        train_transform = ts.Compose([ts.PadNumpy(size=self.scale_size),
+        train_transform = ts.Compose([
+                                      # ts.PadNumpy(size=self.scale_size),
                                       ts.ToTensor(),
                                       ts.ChannelsFirst(),
                                       ts.TypeCast(['float', 'float']),
                                       ts.RandomFlip(h=True, v=True, p=self.random_flip_prob),
                                       ts.RandomAffine(rotation_range=self.rotate_val, translation_range=self.shift_val,
                                                       zoom_range=self.scale_val, interp=('bilinear', 'nearest')),
-                                      ts.NormalizeMedicPercentile(norm_flag=(True, False)),
+                                      # ts.NormalizeMedicPercentile(norm_flag=(True, False)),
                                       ts.RandomCrop(size=self.patch_size),
                                       ts.TypeCast(['float', 'long'])
                                 ])
 
-        valid_transform = ts.Compose([ts.PadNumpy(size=self.scale_size),
+        valid_transform = ts.Compose([
+                                      # ts.PadNumpy(size=self.scale_size),
                                       ts.ToTensor(),
                                       ts.ChannelsFirst(),
                                       ts.TypeCast(['float', 'float']),
-                                      ts.NormalizeMedicPercentile(norm_flag=(True, False)),
+                                      # ts.NormalizeMedicPercentile(norm_flag=(True, False)),
                                       ts.SpecialCrop(size=self.patch_size, crop_type=0),
                                       ts.TypeCast(['float', 'long'])
                                 ])
@@ -77,7 +79,8 @@ class Transformations:
 
     def cmr_3d_sax_transform(self):
 
-        train_transform = ts.Compose([ts.PadNumpy(size=self.scale_size),
+        train_transform = ts.Compose([
+                                      # ts.PadNumpy(size=self.scale_size),
                                       ts.ToTensor(),
                                       ts.ChannelsFirst(),
                                       ts.TypeCast(['float', 'float']),
@@ -85,19 +88,20 @@ class Transformations:
                                       ts.RandomAffine(rotation_range=self.rotate_val, translation_range=self.shift_val,
                                                       zoom_range=self.scale_val, interp=('bilinear', 'nearest')),
                                       #ts.NormalizeMedicPercentile(norm_flag=(True, False)),
-                                      ts.NormalizeMedic(norm_flag=(True, False)),
+                                      # ts.NormalizeMedic(norm_flag=(True, False)),
                                       ts.ChannelsLast(),
                                       ts.AddChannel(axis=0),
                                       ts.RandomCrop(size=self.patch_size),
                                       ts.TypeCast(['float', 'long'])
                                 ])
 
-        valid_transform = ts.Compose([ts.PadNumpy(size=self.scale_size),
+        valid_transform = ts.Compose([
+                                      # ts.PadNumpy(size=self.scale_size),
                                       ts.ToTensor(),
                                       ts.ChannelsFirst(),
                                       ts.TypeCast(['float', 'float']),
                                       #ts.NormalizeMedicPercentile(norm_flag=(True, False)),
-                                      ts.NormalizeMedic(norm_flag=(True, False)),
+                                      # ts.NormalizeMedic(norm_flag=(True, False)),
                                       ts.ChannelsLast(),
                                       ts.AddChannel(axis=0),
                                       ts.SpecialCrop(size=self.patch_size, crop_type=0),
@@ -126,12 +130,13 @@ class Transformations:
         return {'train': train_transform, 'valid': valid_transform}
 
     def test_3d_sax_transform(self):
-        test_transform = ts.Compose([ts.PadFactorNumpy(factor=self.division_factor),
+        test_transform = ts.Compose([
+                                     # ts.PadFactorNumpy(factor=self.division_factor),
                                      ts.ToTensor(),
                                      ts.ChannelsFirst(),
                                      ts.TypeCast(['float']),
                                      #ts.NormalizeMedicPercentile(norm_flag=True),
-                                     ts.NormalizeMedic(norm_flag=True),
+                                     # ts.NormalizeMedic(norm_flag=True),
                                      ts.ChannelsLast(),
                                      ts.AddChannel(axis=0),
                                      ])

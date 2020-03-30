@@ -8,7 +8,6 @@ from models import get_model
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import math, numpy, os
-from scipy.misc import imresize
 from skimage.transform import resize
 from dataio.loader.utils import write_nifti_img
 from torch.nn import functional as F

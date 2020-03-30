@@ -13,8 +13,7 @@ import os, time
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import math, numpy
-import numpy as np 
-from scipy.misc import imresize
+import numpy as np
 from skimage.transform import resize
 
 def plotNNFilter(units, figure_id, interp='bilinear', colormap=cm.jet, colormap_lim=None, title=''):
