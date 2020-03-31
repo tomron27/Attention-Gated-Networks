@@ -1,11 +1,12 @@
 {
   "training":{
-    "arch_type": "acdc_sax",
+    "arch_type": "ct_82",
     "n_epochs": 1000,
     "save_epoch_freq": 10,
     "lr_policy": "step",
     "lr_decay_iters": 250,
     "batchSize": 2,
+    "num_workers": 1,
     "preloadData": true
   },
   "visualisation":{
@@ -16,10 +17,10 @@
     "display_single_pane_ncols": 0
   },
   "data_path": {
-    "acdc_sax": "/home/tomron27/datasets/CT-82/"
+    "ct_82": "/home/tomron27/datasets/CT-82/"
   },
   "augmentation": {
-    "acdc_sax": {
+    "ct_82": {
       "shift": [0.1,0.1],
       "rotate": 15.0,
       "scale": [0.7,1.3],

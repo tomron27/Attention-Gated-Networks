@@ -12,7 +12,7 @@ class CMR3DDataset(data.Dataset):
         super(CMR3DDataset, self).__init__()
         image_dir = join(root_dir, split, 'image')
         target_dir = join(root_dir, split, 'label')
-        self.image_filenames  = sorted([join(image_dir, x) for x in listdir(image_dir) if is_image_file(x)])
+        self.image_filenames = sorted([join(image_dir, x) for x in listdir(image_dir) if is_image_file(x)])
         self.target_filenames = sorted([join(target_dir, x) for x in listdir(target_dir) if is_image_file(x)])
         assert len(self.image_filenames) == len(self.target_filenames)
 
