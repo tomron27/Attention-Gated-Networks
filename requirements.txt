@@ -1,0 +1,9 @@
+numpy
+pandas
+Pillow
+torch
+tqdm
+scikit-image
+scikit-learn
+visdom
+git+https://github.com/tomron27/torchsample.git
