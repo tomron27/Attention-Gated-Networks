@@ -29,7 +29,8 @@ class Transformations:
             'test_sax': self.test_3d_sax_transform,
             'acdc_sax': self.cmr_3d_sax_transform,
             'us':       self.ultrasound_transform,
-            'us1':       self.ultrasound_transform,
+            'us1':      self.ultrasound_transform,
+            'ct_82':    self.ct_82_transform,
         }[self.name]()
 
     def print(self):
@@ -73,6 +74,30 @@ class Transformations:
                                       # ts.NormalizeMedicPercentile(norm_flag=(True, False)),
                                       ts.SpecialCrop(size=self.patch_size, crop_type=0),
                                       ts.TypeCast(['float', 'long'])
+                                ])
+
+        return {'train': train_transform, 'valid': valid_transform}
+
+    def ct_82_transform(self):
+        train_transform = ts.Compose([
+                                      ts.ToTensor(),
+                                      ts.Pad(size=self.scale_size),
+                                      ts.TypeCast(['long', 'float']),
+                                      ts.RandomFlip(h=True, v=True, p=self.random_flip_prob),
+                                      ts.RandomAffine(rotation_range=self.rotate_val, translation_range=self.shift_val,
+                                                      zoom_range=self.scale_val, interp=('bilinear', 'nearest')),
+                                      ts.RangeNormalize(0, 1),
+                                      # ts.RandomCrop(size=self.patch_size),
+                                      # ts.TypeCast(['float', 'long'])
+                                ])
+
+
+        valid_transform = ts.Compose([
+                                      ts.ToTensor(),
+                                      ts.Pad(size=self.scale_size),
+                                      ts.TypeCast(['long', 'float']),
+                                      ts.RangeNormalize(0, 1),
+                                      # ts.TypeCast(['float', 'long'])
                                 ])
 
         return {'train': train_transform, 'valid': valid_transform}
