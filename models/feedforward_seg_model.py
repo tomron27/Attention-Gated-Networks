@@ -128,8 +128,7 @@ class FeedForwardSegmentation(BaseModel):
         return OrderedDict(seg_stats)
 
     def get_current_errors(self):
-        return OrderedDict([('Seg_Loss', self.loss_S.data[0])
-                            ])
+        return OrderedDict([('Seg_Loss', self.loss_S.item())])
 
     def get_current_visuals(self):
         inp_img = util.tensor2im(self.input, 'img')

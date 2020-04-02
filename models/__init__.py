@@ -20,6 +20,7 @@ class ModelOpts:
         self.path_pre_trained_model = None
         self.criterion = 'cross_entropy'
         self.type = 'seg'
+        self.optim = 'sgd'
 
         # Attention
         self.nonlocal_mode = 'concatenation'
@@ -43,6 +44,7 @@ class ModelOpts:
         self.which_epoch = opts.which_epoch
 
         if hasattr(opts, 'type'): self.type = opts.type
+        if hasattr(opts, 'optim'): self.optim = opts.optim
         if hasattr(opts, 'l2_reg_weight'): self.l2_reg_weight = opts.l2_reg_weight
         if hasattr(opts, 'lr_rate'):       self.lr_rate = opts.lr_rate
         if hasattr(opts, 'feature_scale'): self.feature_scale = opts.feature_scale
