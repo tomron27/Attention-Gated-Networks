@@ -70,6 +70,36 @@ def elastic_transform(image, alpha=1000, sigma=30, spline_order=1, mode='nearest
     return result
 
 
+class DepthCrop(object):
+    """
+    Perform a depth (channel) crop
+
+    Arguments
+    ---------
+    size : int
+        dimensions of the crop
+
+    crop_type : integer in {crop_types}
+        0 = center crop
+    """
+    def __init__(self, size, crop_type=0):
+        self.crop_types = {0}
+        if crop_type not in self.crop_types:
+            raise ValueError('crop_type must be in {}'.format(self.crop_types))
+        self.size = size
+        self.crop_type = crop_type
+
+    def __call__(self, *inputs):
+        outputs = []
+        if self.crop_type == 0:
+            # center crop
+            for idx, _input in enumerate(inputs):
+                diff = max(0, _input.shape[0] - self.size) / 2.0
+                _input = _input[int(np.ceil(diff)):_input.shape[0]-int(np.floor(diff)), ...]
+                outputs.append(_input)
+        return outputs if idx > 0 else outputs[0]
+
+
 class Merge(object):
     """Merge a group of images
     """

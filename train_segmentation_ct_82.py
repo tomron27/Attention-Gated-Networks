@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import torch
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from dataio.loader.ct_82_dataset import CT82Dataset
@@ -35,13 +36,12 @@ def train(arguments):
     np.random.seed(42)
     root_dir = "/home/tomron27/datasets/CT-82/"
     num_files = len(get_dicom_dirs(os.path.join(root_dir, "image")))
-    train_idx, test_idx, val_idx = get_train_test_val_indices(num_files)
+    train_idx, test_idx, val_idx = get_train_test_val_indices(num_files, test_frac=0.25, val_frac=0.0)
 
-    # TODO - Add transformation to dataset
     ds_transform = get_dataset_transformation(arch_type, opts=json_opts.augmentation)
-    train_dataset = CT82Dataset(root_dir, "train", train_idx, transform=ds_transform['train'])
-    test_dataset = CT82Dataset(root_dir, "test", test_idx, transform=ds_transform['valid'])
-    val_dataset = CT82Dataset(root_dir, "validation", val_idx, transform=ds_transform['valid'])
+    train_dataset = CT82Dataset(root_dir, "train", train_idx, transform=ds_transform['train'], resample=True)
+    test_dataset = CT82Dataset(root_dir, "test", test_idx, transform=ds_transform['valid'], resample=True)
+    # val_dataset = CT82Dataset(root_dir, "validation", val_idx, transform=ds_transform['valid'], resample=True)
 
     # Setup the NN Model
     model = get_model(json_opts.model)
@@ -52,11 +52,11 @@ def train(arguments):
 
     # Setup Data Loaders
     train_loader = DataLoader(dataset=train_dataset, num_workers=train_opts.num_workers, batch_size=train_opts.batchSize, shuffle=True)
-    val_loader = DataLoader(dataset=val_dataset, num_workers=train_opts.num_workers, batch_size=train_opts.batchSize, shuffle=False)
+    # val_loader = DataLoader(dataset=val_dataset, num_workers=train_opts.num_workers, batch_size=train_opts.batchSize, shuffle=False)
     test_loader = DataLoader(dataset=test_dataset,  num_workers=train_opts.num_workers, batch_size=train_opts.batchSize, shuffle=False)
 
     # Visualisation Parameters
-    # visualizer = Visualiser(json_opts.visualisation, save_dir=model.save_dir)
+    visualizer = Visualiser(json_opts.visualisation, save_dir=model.save_dir)
     error_logger = ErrorLogger()
 
     # Training Function
@@ -76,8 +76,8 @@ def train(arguments):
             error_logger.update(errors, split='train')
 
         # Validation and Testing Iterations
-        for loader, split in zip([val_loader, test_loader], ['validation', 'test']):
-            for epoch_iter, (images, labels) in tqdm(enumerate(loader, 1), total=len(loader)):
+        with torch.no_grad():
+            for epoch_iter, (images, labels) in tqdm(enumerate(test_loader, 1), total=len(test_loader)):
 
                 # Make a forward pass with the model
                 model.set_input(images, labels)
@@ -86,17 +86,17 @@ def train(arguments):
                 # Error visualisation
                 errors = model.get_current_errors()
                 stats = model.get_segmentation_stats()
-                error_logger.update({**errors, **stats}, split=split)
+                error_logger.update({**errors, **stats}, split='test')
 
                 # Visualise predictions
                 visuals = model.get_current_visuals()
-                # visualizer.display_current_results(visuals, epoch=epoch, save_result=False)
+                visualizer.display_current_results(visuals, epoch=epoch, save_result=False)
 
-        # Update the plots
-        for split in ['train', 'validation', 'test']:
-            visualizer.plot_current_errors(epoch, error_logger.get_errors(split), split_name=split)
-            visualizer.print_current_errors(epoch, error_logger.get_errors(split), split_name=split)
-        error_logger.reset()
+            # Update the plots
+            for split in ['train', 'test']:
+                visualizer.plot_current_errors(epoch, error_logger.get_errors(split), split_name=split)
+                visualizer.print_current_errors(epoch, error_logger.get_errors(split), split_name=split)
+            error_logger.reset()
 
         # Save the model parameters
         if epoch % train_opts.save_epoch_freq == 0:

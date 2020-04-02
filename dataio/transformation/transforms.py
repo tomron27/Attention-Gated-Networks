@@ -1,6 +1,6 @@
 import torchsample.transforms as ts
 from pprint import pprint
-
+from .myImageTransformations import DepthCrop
 
 class Transformations:
 
@@ -78,15 +78,19 @@ class Transformations:
 
         return {'train': train_transform, 'valid': valid_transform}
 
+    # TODO - Fix random flip / affine transformation for 3D data
     def ct_82_transform(self):
         train_transform = ts.Compose([
                                       ts.ToTensor(),
                                       ts.Pad(size=self.scale_size),
-                                      ts.TypeCast(['long', 'float']),
-                                      ts.RandomFlip(h=True, v=True, p=self.random_flip_prob),
-                                      ts.RandomAffine(rotation_range=self.rotate_val, translation_range=self.shift_val,
-                                                      zoom_range=self.scale_val, interp=('bilinear', 'nearest')),
-                                      ts.RangeNormalize(0, 1),
+                                      ts.TypeCast(['float', 'float']),
+                                      # ts.RandomFlip(h=True, v=True, p=self.random_flip_prob),
+                                      # ts.RandomAffine(rotation_range=self.rotate_val, translation_range=self.shift_val,
+                                      #                 zoom_range=self.scale_val, interp=('bilinear', 'nearest')),
+                                      # ts.RangeNormalize(0, 1),
+                                      ts.SpecialCrop(size=self.patch_size, crop_type=0),
+                                      DepthCrop(size=self.patch_size[2], crop_type=0),
+                                      ts.AddChannel(axis=0),
                                       # ts.RandomCrop(size=self.patch_size),
                                       # ts.TypeCast(['float', 'long'])
                                 ])
@@ -95,8 +99,11 @@ class Transformations:
         valid_transform = ts.Compose([
                                       ts.ToTensor(),
                                       ts.Pad(size=self.scale_size),
-                                      ts.TypeCast(['long', 'float']),
-                                      ts.RangeNormalize(0, 1),
+                                      ts.TypeCast(['float', 'float']),
+                                      # ts.RangeNormalize(0, 1),
+                                      ts.SpecialCrop(size=self.patch_size, crop_type=0),
+                                      DepthCrop(size=self.patch_size[2], crop_type=0),
+                                      ts.AddChannel(axis=0),
                                       # ts.TypeCast(['float', 'long'])
                                 ])
 
