@@ -8,7 +8,7 @@ from .utils import check_exceptions, get_dicom_dirs, get_nifti_files, load_dicom
 
 
 class CT82Dataset(torch.utils.data.Dataset):
-    def __init__(self, root_dir, split, split_indices, transform=None, preload_data=False):
+    def __init__(self, root_dir, split, split_indices, transform=None, preload_data=False, resample=False):
         super(CT82Dataset, self).__init__()
 
         # Load image / label files
@@ -27,12 +27,15 @@ class CT82Dataset(torch.utils.data.Dataset):
         # data augmentation
         self.transform = transform
 
+        # Size resampling
+        self.resample = resample
+
         # data load into the ram memory
         self.preload_data = preload_data
         if self.preload_data:
             print('Preloading the dataset ...')
-            self.raw_images = [load_dicom_dir(ii) for ii in self.image_filenames]
-            self.raw_labels = [load_nifti_mask(ii) for ii in self.target_filenames]
+            self.raw_images = [load_dicom_dir(ii, resample=self.resample) for ii in self.image_filenames]
+            self.raw_labels = [load_nifti_mask(ii, resample=self.resample) for ii in self.target_filenames]
             print('Loading is done\n')
 
     def __getitem__(self, index):
@@ -41,14 +44,14 @@ class CT82Dataset(torch.utils.data.Dataset):
 
         # load the nifti images
         if not self.preload_data:
-            input = load_dicom_dir(self.image_filenames[index])
-            target = load_nifti_mask(self.target_filenames[index])
+            input = load_dicom_dir(self.image_filenames[index], resample=self.resample)
+            target = load_nifti_mask(self.target_filenames[index], resample=self.resample)
         else:
             input = np.copy(self.raw_images[index])
             target = np.copy(self.raw_labels[index])
 
         # handle exceptions
-        check_exceptions(input, target)
+        check_exceptions(input, target, self.image_filenames[index])
         if self.transform:
             input, target = self.transform(input, target)
 
