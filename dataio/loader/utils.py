@@ -8,6 +8,63 @@ def is_image_file(filename):
     return any(filename.endswith(extension) for extension in [".nii.gz", ".dcm"])
 
 
+def load_image_and_mask(idx, dicom_dirs, nifti_paths, resample=True):
+    """
+    Loads and prepares a dicom image and nifti mask together
+    :param idx: index of image in the dataset
+    :param dicom_dirs: list of paths, sorted dicom folders
+    :param nifti_paths: list of paths, sorted nifti files
+    :param resample: bool, wheteher to resample (resize) image and mask in physical coordinates
+    :return: tuple of ndarray (image, mask)
+    """
+    img_path = [i for i in dicom_dirs if "PANCREAS_{:04d}".format(idx) in i]
+    if len(img_path) == 0:
+        raise ValueError("Dicom idx {} not found".format(idx))
+    img_path = img_path[0]
+
+    mask_path = [i for i in nifti_paths if "label{:04d}.nii.gz".format(idx) in i]
+    if len(img_path) == 0:
+        raise ValueError("NifTi mask idx {} not found".format(idx))
+    mask_path = mask_path[0]
+
+    # Load image
+    reader = sitk.ImageSeriesReader()
+    dicom_names = reader.GetGDCMSeriesFileNames(img_path)
+    reader.SetFileNames(dicom_names)
+    img = reader.Execute()
+
+    # Load mask
+    mask = sitk.ReadImage(mask_path)
+
+    if resample:        # Resample w/r to the dicom image
+        resample = sitk.ResampleImageFilter()
+        resample.SetInterpolator(sitk.sitkLinear)
+        resample.SetOutputDirection(img.GetDirection())
+        new_spacing = [2, 2, 2]
+        resample.SetOutputSpacing(new_spacing)
+
+        orig_size = np.array(img.GetSize(), dtype=np.int32)
+        orig_spacing = img.GetSpacing()
+        new_size = [orig_size[i] * (orig_spacing[i] / new_spacing[i]) for i in range(len(orig_size))]
+        new_size = [int(s) for s in new_size]
+        resample.SetSize(new_size)
+
+        img = resample.Execute(img)
+        mask = resample.Execute(mask)
+
+    # Rotate and convert to numpy
+    img = sitk.GetArrayFromImage(img)[::-1]
+    img = np.flip(img, axis=0)
+    img = np.rot90(img, k=2, axes=(1, 2))
+    img = img.copy()
+
+    mask = sitk.GetArrayFromImage(mask)
+    mask = np.rot90(mask, k=2, axes=(1, 2))
+    mask = mask.copy()
+
+    return img, mask
+
+
 def get_train_test_val_indices(n, test_frac=0.3, val_frac=0.5):
     """
     Creates a train-test-validation split out of given index range
@@ -24,62 +81,6 @@ def get_train_test_val_indices(n, test_frac=0.3, val_frac=0.5):
     test = indices[train_split:test_split]
     val = indices[test_split:]
     return train, test, val
-
-
-def sitk_resample(image, new_spacing=(2, 2, 2)):
-    """
-    Resamples the given image to a new physical spacing scheme. Uses linear interpolation.
-    :param image: SimpleITK 3D image
-    :param new_spacing: 3-tuple, defines new spacing scheme (x, y, z)
-    :return: SimpleITK 3D image spaced to the new scheme
-    """
-    resample = sitk.ResampleImageFilter()
-    resample.SetInterpolator(sitk.sitkLinear)
-    resample.SetOutputDirection(image.GetDirection())
-    resample.SetOutputOrigin(image.GetOrigin())
-    resample.SetOutputSpacing(new_spacing)
-
-    orig_size = np.array(image.GetSize(), dtype=np.int)
-    orig_spacing = image.GetSpacing()
-    new_size = [orig_size[i]*(orig_spacing[i]/new_spacing[i]) for i in range(len(orig_size))]
-    new_size = np.ceil(new_size).astype(np.int)
-    new_size = [int(s) for s in new_size]
-    resample.SetSize(new_size)
-    return resample.Execute(image)
-
-
-def load_dicom_dir(dicom_path, resample=True):
-    """
-    Load a folder with 3D dicom sequence (for CT-82 Dataset)
-    :param dicom_path: str, path to dicom folder
-    :param resample: bool, whether to resample the image
-    :return: ndarray, 3D array representation of volumetric data
-    """
-    reader = sitk.ImageSeriesReader()
-    dicom_names = reader.GetGDCMSeriesFileNames(dicom_path)
-    reader.SetFileNames(dicom_names)
-    image = reader.Execute()
-    if resample:
-        image = sitk_resample(image)
-    image = sitk.GetArrayFromImage(image)[::-1]
-    image = np.flip(image, axis=0)
-    image = np.rot90(image, k=2, axes=(1, 2))
-    return image.astype(np.float32).copy()
-
-
-def load_nifti_mask(mask_path, resample=True):
-    """
-    Load NifTi 3D mask data, to work in conjunction with load_dicom_dir (for CT-82 Dataset)
-    :param mask_path: path to "labelXXXX.nii.gz" mask file
-    :param resample: bool, whether to resample the image
-    :return: ndarray, 3D array representation of volumetric mask data
-    """
-    mask = sitk.ReadImage(mask_path)
-    if resample:
-        mask = sitk_resample(mask)
-    mask = sitk.GetArrayFromImage(mask)
-    mask = np.rot90(mask, k=2, axes=(1, 2))
-    return mask.astype(np.float32).copy()
 
 
 def get_dicom_dirs(parent_folder):

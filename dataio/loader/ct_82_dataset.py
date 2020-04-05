@@ -4,7 +4,7 @@ import numpy as np
 import datetime
 
 from os.path import join
-from .utils import check_exceptions, get_dicom_dirs, get_nifti_files, load_dicom_dir, load_nifti_mask
+from .utils import check_exceptions, get_dicom_dirs, get_nifti_files, load_image_and_mask
 
 
 class CT82Dataset(torch.utils.data.Dataset):
@@ -34,8 +34,9 @@ class CT82Dataset(torch.utils.data.Dataset):
         self.preload_data = preload_data
         if self.preload_data:
             print('Preloading the dataset ...')
-            self.raw_images = [load_dicom_dir(ii, resample=self.resample) for ii in self.image_filenames]
-            self.raw_labels = [load_nifti_mask(ii, resample=self.resample) for ii in self.target_filenames]
+            data = [load_image_and_mask(ii, self.image_filenames, self.target_filenames, self.resample)
+                    for ii in range(len(self.image_filenames))]
+            self.raw_images,  self.raw_labels = [[i for i, j in data], [j for i, j in data]]
             print('Loading is done\n')
 
     def __getitem__(self, index):
@@ -44,8 +45,7 @@ class CT82Dataset(torch.utils.data.Dataset):
 
         # load the nifti images
         if not self.preload_data:
-            input = load_dicom_dir(self.image_filenames[index], resample=self.resample)
-            target = load_nifti_mask(self.target_filenames[index], resample=self.resample)
+            input, target = load_image_and_mask(index, self.image_filenames, self.target_filenames, self.resample)
         else:
             input = np.copy(self.raw_images[index])
             target = np.copy(self.raw_labels[index])
