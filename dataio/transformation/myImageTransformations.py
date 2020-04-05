@@ -1,4 +1,5 @@
 import numpy as np
+import random
 import scipy
 import scipy.ndimage
 from scipy.ndimage.filters import gaussian_filter
@@ -6,6 +7,7 @@ from scipy.ndimage.interpolation import map_coordinates
 import collections
 from PIL import Image
 import numbers
+import torch
 
 
 def center_crop(x, center_crop_size):
@@ -70,34 +72,111 @@ def elastic_transform(image, alpha=1000, sigma=30, spline_order=1, mode='nearest
     return result
 
 
-class DepthCrop(object):
+class RandomFlip3D(object):
+
+    def __init__(self, z=True, x=True, y=True, p=0.5):
+        """
+        Performs a random flip across z, x and y axis.
+
+        Arguments
+        ---------
+        z : boolean
+            whether to flip z-axis with probability p
+
+        x : boolean
+            whether to flip x-axis with probability p
+
+        y : boolean
+            whether to flip y-axis with probability p
+
+        p : float between [0,1]
+            flip probability
+        """
+        self.z = z
+        self.x = x
+        self.y = y
+        self.p = p
+
+    def __call__(self, x, y=None):
+        if self.z:
+            # Z axis flip
+            if random.random() < self.p:
+                x = torch.flip(x, dims=[0])
+                y = torch.flip(y, dims=[0])
+        if self.x:
+            # X axis flip
+            if random.random() < self.p:
+                x = torch.flip(x, dims=[1])
+                y = torch.flip(y, dims=[1])
+        if self.y:
+            # Y axis flip
+            if random.random() < self.p:
+                x = torch.flip(x, dims=[2])
+                y = torch.flip(y, dims=[2])
+        if y is not None:
+            return x, y
+        else:
+            return x
+
+
+class CustomCrop3D(object):
     """
-    Perform a depth (channel) crop
+    Perform a custom crop along z, x and y axis
 
     Arguments
     ---------
-    size : int
-        dimensions of the crop
+    size : 3 int tuple
+        dimensions of the crop: (Z, X, Y)
 
     crop_type : integer in {crop_types}
         0 = center crop
+        1 = random crop
     """
-    def __init__(self, size, crop_type=0):
-        self.crop_types = {0}
+    def __init__(self, size=(96, 160, 160), crop_type="center"):
+        self.crop_types = ["center", "random"]
         if crop_type not in self.crop_types:
             raise ValueError('crop_type must be in {}'.format(self.crop_types))
         self.size = size
         self.crop_type = crop_type
 
-    def __call__(self, *inputs):
-        outputs = []
-        if self.crop_type == 0:
-            # center crop
-            for idx, _input in enumerate(inputs):
-                diff = max(0, _input.shape[0] - self.size) / 2.0
-                _input = _input[int(np.ceil(diff)):_input.shape[0]-int(np.floor(diff)), ...]
-                outputs.append(_input)
-        return outputs if idx > 0 else outputs[0]
+    def __call__(self, x, y=None):
+
+        assert len(x.shape) == 3, "Input tensor for CustomCrop3D must be a 3D tensor, instead: {}".format(len(x.shape))
+        if y is not None:
+            assert x.shape == y.shape, "Mismatched dimensions - x: {}, y: {}".format(x.shape, y.shape)
+
+        if self.crop_type == "center":
+            z_diff = max(0, x.shape[0] - self.size[0]) / 2.0
+            x_diff = max(0, x.shape[1] - self.size[1]) / 2.0
+            y_diff = max(0, x.shape[2] - self.size[2]) / 2.0
+        if self.crop_type == "random":
+            if max(0, x.shape[0] - self.size[0]) == 0:
+                z_diff = 0
+            else:
+                z_diff = random.randrange(max(0, x.shape[0] - self.size[0]))
+            if max(0, x.shape[1] - self.size[1]) == 0:
+                x_diff = 0
+            else:
+                x_diff = random.randrange(max(0, x.shape[1] - self.size[1]))
+            if max(0, x.shape[2] - self.size[2]) == 0:
+                y_diff = 0
+            else:
+                y_diff = random.randrange(max(0, x.shape[2] - self.size[2]))
+
+        x = x[
+            int(np.floor(z_diff)):self.size[0] + int(np.ceil(z_diff)),
+            int(np.floor(x_diff)):self.size[1] + int(np.ceil(x_diff)),
+            int(np.floor(y_diff)):self.size[2] + int(np.ceil(y_diff))
+            ]
+        if y is not None:
+            y = y[
+                int(np.floor(z_diff)):self.size[0] + int(np.ceil(z_diff)),
+                int(np.floor(x_diff)):self.size[1] + int(np.ceil(x_diff)),
+                int(np.floor(y_diff)):self.size[2] + int(np.ceil(y_diff))
+                ]
+            return x, y
+        else:
+            return x
 
 
 class Merge(object):
