@@ -56,11 +56,11 @@ def load_image_and_mask(idx, dicom_dirs, nifti_paths, resample=True):
     img = sitk.GetArrayFromImage(img)[::-1]
     img = np.flip(img, axis=0)
     img = np.rot90(img, k=2, axes=(1, 2))
-    img = img.copy()
+    img = img.copy().astype(np.float32)
 
     mask = sitk.GetArrayFromImage(mask)
     mask = np.rot90(mask, k=2, axes=(1, 2))
-    mask = mask.copy()
+    mask = mask.copy().astype(np.float32)
 
     return img, mask
 

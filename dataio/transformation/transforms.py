@@ -88,9 +88,9 @@ class Transformations:
                                       # ts.RandomAffine(rotation_range=self.rotate_val, translation_range=self.shift_val,
                                       #                 zoom_range=self.scale_val, interp=('bilinear', 'nearest')),
                                       # ts.RangeNormalize(0, 1),
-                                      CustomCrop3D(size=self.patch_size[::-1], crop_type="random"),
+                                      CustomCrop3D(size=self.patch_size, crop_type="random"),
                                       ts.AddChannel(axis=0),
-                                      # ts.TypeCast(['float', 'long'])
+                                      # ts.TypeCast(['float', 'float'])
                                 ])
 
 
@@ -99,9 +99,9 @@ class Transformations:
                                       ts.Pad(size=self.scale_size),
                                       ts.TypeCast(['float', 'float']),
                                       # ts.RangeNormalize(0, 1),
-                                      CustomCrop3D(size=self.patch_size[::-1], crop_type="center"),
+                                      CustomCrop3D(size=self.patch_size, crop_type="center"),
                                       ts.AddChannel(axis=0),
-                                      # ts.TypeCast(['float', 'long'])
+                                      # ts.TypeCast(['float', 'float'])
                                 ])
 
         return {'train': train_transform, 'valid': valid_transform}
@@ -121,7 +121,7 @@ class Transformations:
                                       ts.ChannelsLast(),
                                       ts.AddChannel(axis=0),
                                       ts.RandomCrop(size=self.patch_size),
-                                      ts.TypeCast(['float', 'long'])
+                                      # ts.TypeCast(['float', 'long'])
                                 ])
 
         valid_transform = ts.Compose([

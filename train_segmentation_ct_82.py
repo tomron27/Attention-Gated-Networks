@@ -27,20 +27,15 @@ def train(arguments):
     # Architecture type
     arch_type = train_opts.arch_type
 
-    # Setup Dataset and Augmentation
-    # ds_class = get_dataset(arch_type)
-    # ds_path = get_dataset_path(arch_type, json_opts.data_path)
-    # ds_transform = get_dataset_transformation(arch_type, opts=json_opts.augmentation)
-
     # Create train-test-validation splits
-    np.random.seed(42)
+    np.random.seed(41)
     root_dir = "/home/tomron27/datasets/CT-82/"
     num_files = len(get_dicom_dirs(os.path.join(root_dir, "image")))
     train_idx, test_idx, val_idx = get_train_test_val_indices(num_files, test_frac=0.25, val_frac=0.0)
 
     ds_transform = get_dataset_transformation(arch_type, opts=json_opts.augmentation)
-    train_dataset = CT82Dataset(root_dir, "train", train_idx, transform=ds_transform['train'], resample=True)
-    test_dataset = CT82Dataset(root_dir, "test", test_idx, transform=ds_transform['valid'], resample=True)
+    train_dataset = CT82Dataset(root_dir, "train", train_idx, transform=ds_transform['train'], resample=True, preload_data=train_opts.preloadData)
+    test_dataset = CT82Dataset(root_dir, "test", test_idx, transform=ds_transform['valid'], resample=True, preload_data=train_opts.preloadData)
     # val_dataset = CT82Dataset(root_dir, "validation", val_idx, transform=ds_transform['valid'], resample=True)
 
     # Setup the NN Model

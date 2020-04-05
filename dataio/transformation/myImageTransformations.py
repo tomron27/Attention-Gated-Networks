@@ -164,18 +164,24 @@ class CustomCrop3D(object):
                 y_diff = random.randrange(max(0, x.shape[2] - self.size[2]))
 
         x = x[
-            int(np.floor(z_diff)):self.size[0] + int(np.ceil(z_diff)),
-            int(np.floor(x_diff)):self.size[1] + int(np.ceil(x_diff)),
-            int(np.floor(y_diff)):self.size[2] + int(np.ceil(y_diff))
+            int(np.floor(z_diff)):self.size[0] + int(np.floor(z_diff)),
+            int(np.floor(x_diff)):self.size[1] + int(np.floor(x_diff)),
+            int(np.floor(y_diff)):self.size[2] + int(np.floor(y_diff))
             ]
         if y is not None:
             y = y[
-                int(np.floor(z_diff)):self.size[0] + int(np.ceil(z_diff)),
-                int(np.floor(x_diff)):self.size[1] + int(np.ceil(x_diff)),
-                int(np.floor(y_diff)):self.size[2] + int(np.ceil(y_diff))
+                int(np.floor(z_diff)):self.size[0] + int(np.floor(z_diff)),
+                int(np.floor(x_diff)):self.size[1] + int(np.floor(x_diff)),
+                int(np.floor(y_diff)):self.size[2] + int(np.floor(y_diff))
                 ]
+            assert list(x.shape) == self.size, \
+                print("Post 3D crop shape mismatch. x.shape: {}, crop size: {}".format(x.shape, self.size))
+            assert list(y.shape) == self.size, \
+                print("Post 3D crop shape mismatch. y.shape: {}, crop size: {}".format(y.shape, self.size))
             return x, y
         else:
+            assert list(x.shape) == self.size, \
+                print("Post 3D crop shape mismatch. x.shape: {}, crop size: {}".format(x.shape, self.size))
             return x
 
 
