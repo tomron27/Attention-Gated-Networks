@@ -5,6 +5,8 @@ import scipy.ndimage
 from scipy.ndimage.filters import gaussian_filter
 from scipy.ndimage.interpolation import map_coordinates
 import collections
+import torchvision.transforms.functional as F
+from torchvision import transforms
 from PIL import Image
 import numbers
 import torch
@@ -183,6 +185,161 @@ class CustomCrop3D(object):
             assert list(x.shape) == self.size, \
                 print("Post 3D crop shape mismatch. x.shape: {}, crop size: {}".format(x.shape, self.size))
             return x
+
+
+class RandomAxialRotation3D(object):
+    """
+    Rotates a 3D tensor on the z axis
+
+    Arguments
+    ---------
+    degrees :   int
+        rotation bounds (-degrees, degrees)
+    """
+    def __init__(self, degrees):
+        if not isinstance(degrees, numbers.Number):
+            raise ValueError("Degrees must be a number.")
+        if degrees < 0:
+            raise ValueError("Degrees must be positive.")
+        self.degrees = (-degrees, degrees)
+
+    @staticmethod
+    def get_params(degrees):
+        angle = np.random.uniform(degrees[0], degrees[1])
+        return angle
+
+    def __call__(self, x, y=None):
+        if len(x.shape) != 3:
+            raise ValueError("Input of RandomAxialRotation3D should be a 3 dimensionnal tensor.")
+
+        angle = self.get_params(self.degrees)
+        x_rotated = np.zeros(x.shape, dtype=x.dtype)
+        y_rotated = np.zeros(y.shape, dtype=y.dtype) if y is not None else None
+
+        for i in range(x.shape[0]):
+            x_rotated[i,:,:] = F.rotate(Image.fromarray(x[i,:,:], mode='F'), angle)
+            if y is not None:
+                y_rotated[x,:,:] = F.rotate(Image.fromarray(y[i,:,:], mode='F'), angle)
+        if y is not None:
+            return x, y
+        return x
+
+
+class RandomAffine3D(object):
+    """Apply affine transformation on the image keeping image center invariant
+
+    Args:
+        degrees (float or int): rotation angle in degrees between -180 and 180, clockwise direction.
+        translate (list or tuple of integers): horizontal and vertical translations (post-rotation translation)
+        scale (float): overall scale
+        shear (float or tuple or list): shear angle value in degrees between -180 to 180, clockwise direction.
+        If a tuple of list is specified, the first value corresponds to a shear parallel to the x axis, while
+        the second value corresponds to a shear parallel to the y axis.
+        resample (``PIL.Image.NEAREST`` or ``PIL.Image.BILINEAR`` or ``PIL.Image.BICUBIC``, optional):
+            An optional resampling filter.
+            See `filters`_ for more information.
+            If omitted, or if the image has mode "1" or "P", it is set to ``PIL.Image.NEAREST``.
+        fillcolor (int): Optional fill color for the area outside the transform in the output image. (Pillow>=5.0.0)
+    """
+    def __init__(self, degrees, translate=None, scale=None, shear=None, resample=False, fillcolor=0):
+        if not isinstance(degrees, numbers.Number):
+            raise ValueError("Degrees must be a number.")
+        if degrees < 0:
+            raise ValueError("Degrees must be positive.")
+        self.degrees = (-degrees, degrees)
+
+        if translate is not None:
+            assert isinstance(translate, (tuple, list)) and len(translate) == 2, \
+                "translate should be a list or tuple and it must be of length 2."
+            for t in translate:
+                if not (0.0 <= t <= 1.0):
+                    raise ValueError("translation values should be between 0 and 1")
+        self.translate = translate
+
+        if scale is not None:
+            assert isinstance(scale, (tuple, list)) and len(scale) == 2, \
+                "scale should be a list or tuple and it must be of length 2."
+            for s in scale:
+                if s <= 0:
+                    raise ValueError("scale values should be positive")
+        self.scale = scale
+
+        if shear is not None:
+            if isinstance(shear, numbers.Number):
+                if shear < 0:
+                    raise ValueError("If shear is a single number, it must be positive.")
+                self.shear = (-shear, shear)
+            else:
+                assert isinstance(shear, (tuple, list)) and len(shear) == 2, \
+                    "shear should be a list or tuple and it must be of length 2."
+                self.shear = shear
+        else:
+            self.shear = shear
+
+        self.resample = resample
+        self.fillcolor = fillcolor
+
+    @staticmethod
+    def get_params(degrees, translate, scale_ranges, shears, img_size):
+        """Get parameters for affine transformation
+        Returns:
+            sequence: params to be passed to the affine transformation
+        """
+        angle = np.random.uniform(degrees[0], degrees[1])
+        if translate is not None:
+            max_dx = translate[0] * img_size[0]
+            max_dy = translate[1] * img_size[1]
+            translations = (np.round(np.random.uniform(-max_dx, max_dx)),
+                            np.round(np.random.uniform(-max_dy, max_dy)))
+        else:
+            translations = (0, 0)
+
+        if scale_ranges is not None:
+            scale = np.random.uniform(scale_ranges[0], scale_ranges[1])
+        else:
+            scale = 1.0
+
+        if shears is not None:
+            shear = np.random.uniform(shears[0], shears[1])
+        else:
+            shear = 0.0
+
+        return angle, translations, scale, shear
+
+    def sample_augment(self, input_data, params):
+        if isinstance(input_data, torch.Tensor):
+            input_data = transforms.ToPILImage(mode='F')(input_data)
+        input_data = F.affine(input_data, *params, resample=self.resample, fillcolor=self.fillcolor)
+        return input_data
+
+    def label_augment(self, gt_data, params):
+        gt_data = self.sample_augment(gt_data, params)
+        np_gt_data = np.array(gt_data)
+        np_gt_data[np_gt_data >= 0.5] = 1.0
+        np_gt_data[np_gt_data < 0.5] = 0.0
+        gt_data = Image.fromarray(np_gt_data, mode='F')
+        return gt_data
+
+    def __call__(self, x, y=None):
+
+        if isinstance(x, torch.Tensor):
+            x_size = list(x.size())[1:]
+        else:
+            raise ValueError("Cannot infer shape - unrecognized input datatype: {}".format(type(x)))
+
+        params = self.get_params(self.degrees, self.translate, self.scale, self.shear, x_size)
+        x_output = [self.sample_augment(i, params) for i in x]
+        x_output = [transforms.ToTensor()(i) for i in x_output]
+        x_output = torch.stack(x_output)
+        x_output = x_output.squeeze()
+
+        if y is not None:
+            y_output = [self.sample_augment(i, params) for i in y]
+            y_output = [transforms.ToTensor()(i) for i in y_output]
+            y_output = torch.stack(y_output)
+            y_output = y_output.squeeze()
+            return x_output, y_output
+        return x_output
 
 
 class Merge(object):

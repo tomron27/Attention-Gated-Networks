@@ -13,13 +13,13 @@ class CT82Dataset(torch.utils.data.Dataset):
 
         self.split_indexes = split_indexes
         # Load image / label files
-        self.image_filenames = sorted(get_dicom_dirs(join(root_dir, 'image')))
-        self.target_filenames = sorted(get_nifti_files(join(root_dir, 'label')))
+        self.image_filenames = [image for i, image in enumerate(sorted(get_dicom_dirs(join(root_dir, 'image')))) if i in split_indexes]
+        self.target_filenames = [image for i, image in enumerate(sorted(get_nifti_files(join(root_dir, 'label')))) if i in split_indexes]
 
         assert len(self.image_filenames) == len(self.target_filenames)
 
         # report the number of images in the dataset
-        print('Split: {0}, Total number of images: {1} Dicoms'.format(split, self.__len__()))
+        print('Split: {0}, Total number of images: {1} Dicoms'.format(split, len(self.image_filenames)))
 
         # data augmentation
         self.transform = transform
@@ -40,9 +40,10 @@ class CT82Dataset(torch.utils.data.Dataset):
         # update the seed to avoid workers sample the same augmentation parameters
         np.random.seed(datetime.datetime.now().second + datetime.datetime.now().microsecond)
 
-        # load the nifti images
+        # load the dicom + nifti mask
         if not self.preload_data:
-            input, target = load_image_and_mask(index, self.image_filenames, self.target_filenames, self.resample)
+            load_index = self.split_indexes[index]
+            input, target = load_image_and_mask(load_index, self.image_filenames, self.target_filenames, self.resample)
         else:
             input = np.copy(self.raw_images[index])
             target = np.copy(self.raw_labels[index])
@@ -55,4 +56,4 @@ class CT82Dataset(torch.utils.data.Dataset):
         return input, target
 
     def __len__(self):
-        return len(self.split_indexes)
+        return len(self.image_filenames)
