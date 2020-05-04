@@ -5,8 +5,8 @@
     "save_epoch_freq": 10,
     "lr_policy": "step",
     "lr_decay_iters": 250,
-    "batchSize": 3,
-    "num_workers": 1,
+    "batchSize": 2,
+    "num_workers": 8,
     "preloadData": false
   },
   "visualisation":{
@@ -17,7 +17,7 @@
     "display_single_pane_ncols": 0
   },
   "data_path": {
-    "ct_82": "/home/tomron27/datasets/CT-82/"
+    "ct_82": "/media/tomron27/Data/CT-82"
   },
   "augmentation": {
     "ct_82": {

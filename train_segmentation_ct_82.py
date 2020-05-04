@@ -29,7 +29,7 @@ def train(arguments):
 
     # Create train-test-validation splits
     np.random.seed(41)
-    root_dir = "/home/tomron27/datasets/CT-82/"
+    root_dir = json_opts.data_path.ct_82
     num_files = len(get_dicom_dirs(os.path.join(root_dir, "image")))
     train_idx, test_idx, val_idx = get_train_test_val_indices(num_files, test_frac=0.25, val_frac=0.0)
 

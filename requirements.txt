@@ -1,9 +1,13 @@
 numpy
 pandas
 Pillow
-torch
+SimpleITK
+h5py
+dominate
 tqdm
+opencv-python
 scikit-image
 scikit-learn
 visdom
+nibabel
 git+https://github.com/tomron27/torchsample.git
